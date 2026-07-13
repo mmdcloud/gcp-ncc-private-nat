@@ -13,4 +13,3 @@ output "vpc_id" {
 output "subnets" {
   value = google_compute_subnetwork.subnets[*]
 }
-
