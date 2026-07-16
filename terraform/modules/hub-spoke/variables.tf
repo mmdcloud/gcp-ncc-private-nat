@@ -5,5 +5,6 @@ variable "spokes" {
     location               = string
     spoke_name             = string
     linked_vpc_network_uri = string
+    exclude_export_ranges = optional(list(string))
   }))
 }

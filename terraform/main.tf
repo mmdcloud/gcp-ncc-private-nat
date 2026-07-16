@@ -43,17 +43,6 @@ module "producer_vpc" {
       ]
     },
     {
-      name          = "producer-vpc-firewall-https"
-      target_tags   = ["producer-instance"]
-      source_ranges = ["0.0.0.0/0"]
-      allow_list = [
-        {
-          protocol = "tcp"
-          ports    = ["443"]
-        }
-      ]
-    },
-    {
       name          = "producer-vpc-firewall-ssh"
       target_tags   = ["producer-instance"]
       source_ranges = ["0.0.0.0/0"]
@@ -80,7 +69,7 @@ module "consumer_vpc" {
       purpose                  = "PRIVATE"
       role                     = "ACTIVE"
       private_ip_google_access = true
-      ip_cidr_range            = "10.1.0.0/24"
+      ip_cidr_range            = "10.2.0.0/24"
     }
   ]
   firewall_data = [
@@ -96,13 +85,13 @@ module "consumer_vpc" {
       ]
     },
     {
-      name          = "consumer-vpc-firewall-https"
+      name          = "consumer-vpc-firewall-nat-app"
       target_tags   = ["consumer-instance"]
-      source_ranges = ["0.0.0.0/0"]
+      source_ranges = ["192.168.1.0/24"]
       allow_list = [
         {
           protocol = "tcp"
-          ports    = ["443"]
+          ports    = ["8080"]
         }
       ]
     },
@@ -132,6 +121,7 @@ module "hub_spoke" {
       spoke_name             = "spoke1"
       location               = "global"
       linked_vpc_network_uri = module.producer_vpc.self_link
+      exclude_export_ranges  = ["10.1.0.0/24"]
     },
     {
       spoke_name             = "spoke2"
@@ -157,8 +147,7 @@ resource "google_compute_router_nat" "router_nat" {
   source_subnetwork_ip_ranges_to_nat  = "LIST_OF_SUBNETWORKS"
   enable_dynamic_port_allocation      = false
   enable_endpoint_independent_mapping = false
-  min_ports_per_vm                    = 32
-  type                                = "PRIVATE"     
+  type                                = "PRIVATE"
   subnetwork {
     name                    = module.producer_vpc.subnets[0].id
     source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
@@ -169,7 +158,7 @@ resource "google_compute_router_nat" "router_nat" {
     match       = "nexthop.hub == \"//networkconnectivity.googleapis.com/projects/${data.google_project.project.project_id}/locations/global/hubs/${module.hub_spoke.name}\""
     action {
       source_nat_active_ranges = [
-        module.producer_vpc.subnets[0].self_link
+        module.producer_vpc.subnets[1].self_link
       ]
     }
   }
@@ -185,7 +174,7 @@ module "producer_instance" {
   name                      = "producer-instance"
   machine_type              = "e2-micro"
   zone                      = "${var.producer_region}-a"
-  metadata_startup_script   = "sudo apt-get update; sudo apt-get install nginx -y"
+  metadata_startup_script   = ""
   deletion_protection       = false
   allow_stopping_for_update = true
   image                     = "ubuntu-os-cloud/ubuntu-2004-focal-v20220712"
@@ -205,7 +194,7 @@ module "consumer_instance" {
   name                      = "consumer-instance"
   machine_type              = "e2-micro"
   zone                      = "${var.consumer_region}-a"
-  metadata_startup_script   = "sudo apt-get update; sudo apt-get install nginx -y"
+  metadata_startup_script   = "python3 -m http.server 8080 &"
   deletion_protection       = false
   allow_stopping_for_update = true
   image                     = "ubuntu-os-cloud/ubuntu-2004-focal-v20220712"
