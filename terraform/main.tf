@@ -45,7 +45,7 @@ module "producer_vpc" {
     {
       name          = "producer-vpc-firewall-ssh"
       target_tags   = ["producer-instance"]
-      source_ranges = ["0.0.0.0/0"]
+      source_ranges = ["35.235.240.0/20"]
       allow_list = [
         {
           protocol = "tcp"
@@ -98,7 +98,7 @@ module "consumer_vpc" {
     {
       name          = "consumer-vpc-firewall-ssh"
       target_tags   = ["consumer-instance"]
-      source_ranges = ["0.0.0.0/0"]
+      source_ranges = ["35.235.240.0/20"]
       allow_list = [
         {
           protocol = "tcp"
@@ -115,18 +115,25 @@ module "consumer_vpc" {
 module "hub_spoke" {
   source          = "./modules/hub-spoke"
   hub_name        = "hub"
-  hub_description = "A sample hub"
+  hub_description = "NCC hub"
+  hub_labels = {
+    name = "ncc-hub"
+  }
   spokes = [
     {
-      spoke_name             = "spoke1"
-      location               = "global"
-      linked_vpc_network_uri = module.producer_vpc.self_link
-      exclude_export_ranges  = ["10.1.0.0/24"]
+      spoke_name = "spoke1"
+      location   = "global"
+      linked_vpc_network = {
+        uri                   = module.producer_vpc.self_link
+        exclude_export_ranges = ["10.1.0.0/24"]
+      }
     },
     {
-      spoke_name             = "spoke2"
-      location               = "global"
-      linked_vpc_network_uri = module.consumer_vpc.self_link
+      spoke_name = "spoke2"
+      location   = "global"
+      linked_vpc_network = {
+        uri = module.consumer_vpc.self_link
+      }
     }
   ]
 }
@@ -149,25 +156,25 @@ resource "google_compute_router_nat" "router_nat" {
   enable_endpoint_independent_mapping = false
   type                                = "PRIVATE"
   subnetwork {
-    name                    = module.producer_vpc.subnets[0].id
+    name                    = module.producer_vpc.subnets[0].self_link
     source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
   }
   rules {
     rule_number = 100
     description = "rule for private nat"
-    match       = "nexthop.hub == \"//networkconnectivity.googleapis.com/projects/${data.google_project.project.project_id}/locations/global/hubs/${module.hub_spoke.name}\""
+    match       = "nexthop.hub == \"//networkconnectivity.googleapis.com/${module.hub_spoke.name}\""
     action {
       source_nat_active_ranges = [
         module.producer_vpc.subnets[1].self_link
       ]
     }
   }
+  depends_on = [module.hub_spoke]
 }
 
 # --------------------------------------------------------------------------
 # Compute Instances
 # --------------------------------------------------------------------------
-
 # Producer Instance
 module "producer_instance" {
   source                    = "./modules/compute"
