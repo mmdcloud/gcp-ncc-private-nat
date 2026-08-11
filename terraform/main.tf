@@ -114,7 +114,7 @@ module "consumer_vpc" {
 # --------------------------------------------------------------------------
 module "hub_spoke" {
   source          = "./modules/hub-spoke"
-  hub_name        = "hub"
+  hub_name        = "my-hub"
   hub_description = "NCC hub"
   hub_labels = {
     name = "ncc-hub"
@@ -162,7 +162,7 @@ resource "google_compute_router_nat" "router_nat" {
   rules {
     rule_number = 100
     description = "rule for private nat"
-    match       = "nexthop.hub == \"//networkconnectivity.googleapis.com/${module.hub_spoke.name}\""
+    match       = "nexthop.hub == //networkconnectivity.googleapis.com/projects/${data.google_project.project.project_id}/locations/global/hubs/${module.hub_spoke.name}"
     action {
       source_nat_active_ranges = [
         module.producer_vpc.subnets[1].self_link
