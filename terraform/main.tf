@@ -32,17 +32,6 @@ module "producer_vpc" {
   ]
   firewall_data = [
     {
-      name          = "producer-vpc-firewall-http"
-      target_tags   = ["producer-instance"]
-      source_ranges = ["0.0.0.0/0"]
-      allow_list = [
-        {
-          protocol = "tcp"
-          ports    = ["80"]
-        }
-      ]
-    },
-    {
       name          = "producer-vpc-firewall-ssh"
       target_tags   = ["producer-instance"]
       source_ranges = ["35.235.240.0/20"]
@@ -73,17 +62,6 @@ module "consumer_vpc" {
     }
   ]
   firewall_data = [
-    {
-      name          = "consumer-vpc-firewall-http"
-      target_tags   = ["consumer-instance"]
-      source_ranges = ["0.0.0.0/0"]
-      allow_list = [
-        {
-          protocol = "tcp"
-          ports    = ["80"]
-        }
-      ]
-    },
     {
       name          = "consumer-vpc-firewall-nat-app"
       target_tags   = ["consumer-instance"]
@@ -125,7 +103,6 @@ module "hub_spoke" {
       location   = "global"
       linked_vpc_network = {
         uri                   = module.producer_vpc.self_link
-        exclude_export_ranges = ["10.1.0.0/24"]
       }
     },
     {
@@ -181,7 +158,6 @@ resource "google_compute_router_nat" "router_nat" {
 # --------------------------------------------------------------------------
 # Compute Instances
 # --------------------------------------------------------------------------
-# Producer Instance
 module "producer_instance" {
   source                    = "./modules/compute"
   name                      = "producer-instance"
@@ -201,7 +177,6 @@ module "producer_instance" {
   tags = ["producer-instance"]
 }
 
-# Consumer Instance
 module "consumer_instance" {
   source                    = "./modules/compute"
   name                      = "consumer-instance"
