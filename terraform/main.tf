@@ -1,9 +1,4 @@
 # --------------------------------------------------------------------------
-# Data resource blocks
-# --------------------------------------------------------------------------
-data "google_project" "project" {}
-
-# --------------------------------------------------------------------------
 # VPC Configuration
 # --------------------------------------------------------------------------
 module "producer_vpc" {
@@ -99,14 +94,14 @@ module "hub_spoke" {
   }
   spokes = [
     {
-      spoke_name = "spoke1"
+      spoke_name = "producer-spoke"
       location   = "global"
       linked_vpc_network = {
-        uri                   = module.producer_vpc.self_link
+        uri = module.producer_vpc.self_link
       }
     },
     {
-      spoke_name = "spoke2"
+      spoke_name = "consumer-spoke"
       location   = "global"
       linked_vpc_network = {
         uri = module.consumer_vpc.self_link
@@ -169,8 +164,8 @@ module "producer_instance" {
   image                     = "ubuntu-os-cloud/ubuntu-2004-focal-v20220712"
   network_interfaces = [
     {
-      network        = "${module.producer_vpc.vpc_id}"
-      subnetwork     = "${module.producer_vpc.subnets[0].id}"
+      network        = module.producer_vpc.vpc_id
+      subnetwork     = module.producer_vpc.subnets[0].id
       access_configs = []
     }
   ]
@@ -188,8 +183,8 @@ module "consumer_instance" {
   image                     = "ubuntu-os-cloud/ubuntu-2004-focal-v20220712"
   network_interfaces = [
     {
-      network        = "${module.consumer_vpc.vpc_id}"
-      subnetwork     = "${module.consumer_vpc.subnets[0].id}"
+      network        = module.consumer_vpc.vpc_id
+      subnetwork     = module.consumer_vpc.subnets[0].id
       access_configs = []
     }
   ]
