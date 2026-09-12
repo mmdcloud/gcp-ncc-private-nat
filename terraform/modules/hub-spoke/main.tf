@@ -1,6 +1,8 @@
 resource "google_network_connectivity_hub" "hub" {
   name        = var.hub_name
   description = var.hub_description
+  export_psc  = var.export_psc
+  policy_mode = var.hub_policy_mode
   labels      = merge({ name = var.hub_name }, var.hub_labels)
 }
 
@@ -25,28 +27,28 @@ resource "google_network_connectivity_spoke" "spokes" {
   dynamic "linked_producer_vpc_network" {
     for_each = each.value.linked_producer_vpc_network != null ? [each.value.linked_producer_vpc_network] : []
     content {
-      network                = linked_producer_vpc_network.value.network
-      peering                = linked_producer_vpc_network.value.peering
-      exclude_export_ranges  = try(linked_producer_vpc_network.value.exclude_export_ranges, null)
-      include_export_ranges  = try(linked_producer_vpc_network.value.include_export_ranges, null)
+      network               = linked_producer_vpc_network.value.network
+      peering               = linked_producer_vpc_network.value.peering
+      exclude_export_ranges = try(linked_producer_vpc_network.value.exclude_export_ranges, null)
+      include_export_ranges = try(linked_producer_vpc_network.value.include_export_ranges, null)
     }
   }
 
   dynamic "linked_vpn_tunnels" {
     for_each = each.value.linked_vpn_tunnels != null ? [each.value.linked_vpn_tunnels] : []
     content {
-      uris                        = linked_vpn_tunnels.value.uris
-      site_to_site_data_transfer  = linked_vpn_tunnels.value.site_to_site_data_transfer
-      include_import_ranges       = try(linked_vpn_tunnels.value.include_import_ranges, null)
+      uris                       = linked_vpn_tunnels.value.uris
+      site_to_site_data_transfer = linked_vpn_tunnels.value.site_to_site_data_transfer
+      include_import_ranges      = try(linked_vpn_tunnels.value.include_import_ranges, null)
     }
   }
 
   dynamic "linked_interconnect_attachments" {
     for_each = each.value.linked_interconnect_attachments != null ? [each.value.linked_interconnect_attachments] : []
     content {
-      uris                        = linked_interconnect_attachments.value.uris
-      site_to_site_data_transfer  = linked_interconnect_attachments.value.site_to_site_data_transfer
-      include_import_ranges       = try(linked_interconnect_attachments.value.include_import_ranges, null)
+      uris                       = linked_interconnect_attachments.value.uris
+      site_to_site_data_transfer = linked_interconnect_attachments.value.site_to_site_data_transfer
+      include_import_ranges      = try(linked_interconnect_attachments.value.include_import_ranges, null)
     }
   }
 

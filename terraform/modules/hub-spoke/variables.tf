@@ -15,6 +15,18 @@ variable "hub_labels" {
   default     = {}
 }
 
+variable "hub_policy_mode" {
+  type        = string
+  description = "Policy mode for the hub"
+  default     = "PRESET"
+}
+
+variable "export_psc" {
+  type        = bool
+  description = "Labels to apply to the hub."
+  default     = false
+}
+
 # Each spoke supports exactly ONE of the linked_* blocks below (GCP requires
 # exactly one link type per spoke). All are optional at the variable level so
 # a single spokes list can mix VPC spokes, VPN spokes, interconnect spokes,

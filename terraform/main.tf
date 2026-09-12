@@ -1,3 +1,9 @@
+
+data "google_compute_image" "ubuntu_2404" {
+  family  = var.image_family
+  project = var.image_project
+}
+
 # --------------------------------------------------------------------------
 # VPC Configuration
 # --------------------------------------------------------------------------
@@ -113,39 +119,80 @@ module "hub_spoke" {
 # --------------------------------------------------------------------------
 # Cloud Router and Private NAT Gateway
 # --------------------------------------------------------------------------
-resource "google_compute_router" "router" {
-  name    = "router"
-  region  = var.producer_region
-  network = module.producer_vpc.self_link
-}
+# resource "google_compute_router" "router" {
+#   name    = "router"
+#   region  = var.producer_region
+#   network = module.producer_vpc.self_link
+# }
 
-resource "google_compute_router_nat" "router_nat" {
-  name                                = "router-nat"
-  router                              = google_compute_router.router.name
-  region                              = google_compute_router.router.region
+# resource "google_compute_router_nat" "router_nat" {
+#   name                                = "router-nat"
+#   router                              = google_compute_router.router.name
+#   region                              = google_compute_router.router.region
+#   source_subnetwork_ip_ranges_to_nat  = "LIST_OF_SUBNETWORKS"
+#   enable_dynamic_port_allocation      = false
+#   enable_endpoint_independent_mapping = false
+#   type                                = "PRIVATE"
+
+#   subnetwork {
+#     name                    = module.producer_vpc.subnets[0].self_link
+#     source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
+#   }
+
+#   rules {
+#     rule_number = 100
+#     description = "rule for private nat"
+
+#     # If the module outputs the full ID/URI path:
+#     match = "nexthop.hub == \"//networkconnectivity.googleapis.com/${module.hub_spoke.id}\""
+
+#     action {
+#       source_nat_active_ranges = [
+#         module.producer_vpc.subnets[1].self_link
+#       ]
+#     }
+#   }
+
+#   depends_on = [module.hub_spoke]
+# }
+
+module "cloud_nat" {
+  source = "./modules/cloud-nat"
+
+  project_id = var.project_id
+  region     = var.producer_region
+
+  create_router = true
+  router        = "router"
+  network       = module.producer_vpc.self_link
+  type          = "PRIVATE"
+
+  name = "router-nat"
+
   source_subnetwork_ip_ranges_to_nat  = "LIST_OF_SUBNETWORKS"
   enable_dynamic_port_allocation      = false
   enable_endpoint_independent_mapping = false
-  type                                = "PRIVATE"
 
-  subnetwork {
-    name                    = module.producer_vpc.subnets[0].self_link
-    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
-  }
-
-  rules {
-    rule_number = 100
-    description = "rule for private nat"
-
-    # If the module outputs the full ID/URI path:
-    match = "nexthop.hub == \"//networkconnectivity.googleapis.com/${module.hub_spoke.id}\""
-
-    action {
-      source_nat_active_ranges = [
-        module.producer_vpc.subnets[1].self_link
-      ]
+  subnetworks = [
+    {
+      name                     = module.producer_vpc.subnets[0].self_link
+      source_ip_ranges_to_nat  = ["ALL_IP_RANGES"]
+      secondary_ip_range_names = []
     }
-  }
+  ]
+
+  rules = [
+    {
+      rule_number = 100
+      description = "rule for private nat"
+      match       = "nexthop.hub == \"//networkconnectivity.googleapis.com/${module.hub_spoke.id}\""
+      action = {
+        source_nat_active_ranges = [
+          module.producer_vpc.subnets[1].self_link
+        ]
+      }
+    }
+  ]
 
   depends_on = [module.hub_spoke]
 }
@@ -161,7 +208,17 @@ module "producer_instance" {
   metadata_startup_script   = ""
   deletion_protection       = false
   allow_stopping_for_update = true
-  image                     = "ubuntu-os-cloud/ubuntu-2004-focal-v20220712"
+
+  boot_disk = {
+    auto_delete = true
+    device_name = "boot-disk"
+    mode        = "READ_WRITE"
+    image       = data.google_compute_image.ubuntu_2404.self_link
+    size        = var.instance_boot_disk_size_gb
+    type        = var.instance_boot_disk_type
+    labels      = var.instance_labels
+  }
+
   network_interfaces = [
     {
       network        = module.producer_vpc.vpc_id
@@ -180,7 +237,17 @@ module "consumer_instance" {
   metadata_startup_script   = "python3 -m http.server 8080 &"
   deletion_protection       = false
   allow_stopping_for_update = true
-  image                     = "ubuntu-os-cloud/ubuntu-2004-focal-v20220712"
+
+  boot_disk = {
+    auto_delete = true
+    device_name = "boot-disk"
+    mode        = "READ_WRITE"
+    image       = data.google_compute_image.ubuntu_2404.self_link
+    size        = var.instance_boot_disk_size_gb
+    type        = var.instance_boot_disk_type
+    labels      = var.instance_labels
+  }
+
   network_interfaces = [
     {
       network        = module.consumer_vpc.vpc_id
