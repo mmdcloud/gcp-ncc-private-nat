@@ -168,7 +168,7 @@ module "cloud_nat" {
   type          = "PRIVATE"
 
   name = "router-nat"
-
+  
   source_subnetwork_ip_ranges_to_nat  = "LIST_OF_SUBNETWORKS"
   enable_dynamic_port_allocation      = false
   enable_endpoint_independent_mapping = false
