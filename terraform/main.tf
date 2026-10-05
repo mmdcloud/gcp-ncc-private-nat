@@ -119,43 +119,6 @@ module "hub_spoke" {
 # --------------------------------------------------------------------------
 # Cloud Router and Private NAT Gateway
 # --------------------------------------------------------------------------
-# resource "google_compute_router" "router" {
-#   name    = "router"
-#   region  = var.producer_region
-#   network = module.producer_vpc.self_link
-# }
-
-# resource "google_compute_router_nat" "router_nat" {
-#   name                                = "router-nat"
-#   router                              = google_compute_router.router.name
-#   region                              = google_compute_router.router.region
-#   source_subnetwork_ip_ranges_to_nat  = "LIST_OF_SUBNETWORKS"
-#   enable_dynamic_port_allocation      = false
-#   enable_endpoint_independent_mapping = false
-#   type                                = "PRIVATE"
-
-#   subnetwork {
-#     name                    = module.producer_vpc.subnets[0].self_link
-#     source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
-#   }
-
-#   rules {
-#     rule_number = 100
-#     description = "rule for private nat"
-
-#     # If the module outputs the full ID/URI path:
-#     match = "nexthop.hub == \"//networkconnectivity.googleapis.com/${module.hub_spoke.id}\""
-
-#     action {
-#       source_nat_active_ranges = [
-#         module.producer_vpc.subnets[1].self_link
-#       ]
-#     }
-#   }
-
-#   depends_on = [module.hub_spoke]
-# }
-
 module "cloud_nat" {
   source = "./modules/cloud-nat"
 
@@ -168,7 +131,7 @@ module "cloud_nat" {
   type          = "PRIVATE"
 
   name = "router-nat"
-  
+
   source_subnetwork_ip_ranges_to_nat  = "LIST_OF_SUBNETWORKS"
   enable_dynamic_port_allocation      = false
   enable_endpoint_independent_mapping = false
